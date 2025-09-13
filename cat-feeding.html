@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>貓咪餵食記錄系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-pink-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- 標題 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">🐱 貓咪餵食記錄系統</h1>
+            <p class="text-gray-600">記錄小齁和小樾的每日餵食情況</p>
+        </div>
+
+        <!-- 日期選擇 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">📅 選擇日期</h2>
+                <input type="date" id="selectedDate" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            </div>
+        </div>
+
+        <!-- 新增餵食記錄 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">🍽️ 新增餵食記錄</h2>
+            
+            <!-- 餵食模式選擇 -->
+            <div class="mb-4">
+                <div class="flex gap-4">
+                    <label class="flex items-center">
+                        <input type="radio" name="feedingMode" value="calculated" checked onchange="toggleFeedingMode()" class="mr-2">
+                        <span class="text-sm font-medium text-gray-700">📊 計算模式（數量 × 每單位熱量）</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="radio" name="feedingMode" value="manual" onchange="toggleFeedingMode()" class="mr-2">
+                        <span class="text-sm font-medium text-gray-700">✋ 手動模式（直接輸入總熱量）</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 計算模式 -->
+            <div id="calculatedMode" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">貓咪</label>
+                    <select id="catName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="小齁">🐱 小齁</option>
+                        <option value="小樾">🐱 小樾</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">時間</label>
+                    <input type="time" id="feedTime" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">食物類型</label>
+                    <select id="foodType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="乾糧">🥘 乾糧</option>
+                        <option value="罐罐">🥫 罐罐</option>
+                        <option value="其他">🍖 其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">數量</label>
+                    <input type="number" id="amount" placeholder="數量" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" step="0.1">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">每單位熱量</label>
+                    <div class="flex gap-2">
+                        <button onclick="setCalories(0.7)" class="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm">0.7</button>
+                        <input type="number" id="caloriesPerUnit" placeholder="卡路里" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" step="0.001">
+                    </div>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="addFeedingRecord()" class="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105 font-medium">
+                        ➕ 新增記錄
+                    </button>
+                </div>
+            </div>
+
+            <!-- 手動模式 -->
+            <div id="manualMode" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 hidden">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">貓咪</label>
+                    <select id="catNameManual" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="小齁">🐱 小齁</option>
+                        <option value="小樾">🐱 小樾</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">時間</label>
+                    <input type="time" id="feedTimeManual" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">食物類型</label>
+                    <select id="foodTypeManual" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <option value="乾糧">🥘 乾糧</option>
+                        <option value="罐罐">🥫 罐罐</option>
+                        <option value="其他">🍖 其他</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">總熱量（卡路里）</label>
+                    <input type="number" id="totalCalories" placeholder="總熱量" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500" step="0.001">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="addManualFeedingRecord()" class="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all transform hover:scale-105 font-medium">
+                        ✋ 手動新增
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日記錄 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between mb-4 gap-4">
+                <h2 class="text-xl font-semibold text-gray-800">📋 今日餵食記錄</h2>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="showTextSummary()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        📋 顯示文字總結
+                    </button>
+                    <button onclick="exportToText()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                        📄 匯出文字檔
+                    </button>
+                    <button onclick="clearAllRecords()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                        🗑️ 清空記錄
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50">
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">時間</th>
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">貓咪</th>
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">食物類型</th>
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">數量</th>
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">每單位熱量</th>
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">總熱量</th>
+                            <th class="border border-gray-200 px-4 py-3 text-left font-medium text-gray-700">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recordsTable">
+                        <!-- 記錄會動態插入這裡 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 每日熱量統計 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">🐱 小齁 - 今日熱量統計</h3>
+                <div id="xiaoheStats" class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">乾糧:</span>
+                        <span class="font-medium" id="xiaohe-dry">0 卡</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">罐罐:</span>
+                        <span class="font-medium" id="xiaohe-wet">0 卡</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">其他:</span>
+                        <span class="font-medium" id="xiaohe-other">0 卡</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="flex justify-between text-lg font-bold">
+                        <span>總計:</span>
+                        <span class="text-purple-600" id="xiaohe-total">0 卡</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">🐱 小樾 - 今日熱量統計</h3>
+                <div id="xiaoyueStats" class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">乾糧:</span>
+                        <span class="font-medium" id="xiaoyue-dry">0 卡</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">罐罐:</span>
+                        <span class="font-medium" id="xiaoyue-wet">0 卡</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">其他:</span>
+                        <span class="font-medium" id="xiaoyue-other">0 卡</span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="flex justify-between text-lg font-bold">
+                        <span>總計:</span>
+                        <span class="text-purple-600" id="xiaoyue-total">0 卡</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer"></div>
+
+    <script>
+        // 初始化
+        let feedingRecords = JSON.parse(localStorage.getItem('feedingRecords')) || {};
+        
+        // 創建一個自定義的 modal 彈窗函數
+        function showModal(message, isConfirm = false, onConfirm = null) {
+            const modalContainer = document.getElementById('modalContainer');
+            
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+
+            const modalContent = document.createElement('div');
+            modalContent.className = 'modal-content text-center';
+
+            const messageP = document.createElement('p');
+            messageP.className = 'text-gray-700 text-lg mb-6';
+            messageP.textContent = message;
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'flex justify-center gap-4';
+
+            const closeModal = () => {
+                modalOverlay.classList.remove('active');
+                setTimeout(() => modalContainer.removeChild(modalOverlay), 300);
+            };
+
+            if (isConfirm) {
+                const confirmButton = document.createElement('button');
+                confirmButton.className = 'px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors';
+                confirmButton.textContent = '確定';
+                confirmButton.onclick = () => {
+                    if (onConfirm) onConfirm();
+                    closeModal();
+                };
+
+                const cancelButton = document.createElement('button');
+                cancelButton.className = 'px-6 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors';
+                cancelButton.textContent = '取消';
+                cancelButton.onclick = closeModal;
+
+                buttonContainer.appendChild(cancelButton);
+                buttonContainer.appendChild(confirmButton);
+            } else {
+                const okButton = document.createElement('button');
+                okButton.className = 'px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors';
+                okButton.textContent = '好的';
+                okButton.onclick = closeModal;
+                buttonContainer.appendChild(okButton);
+            }
+
+            modalContent.appendChild(messageP);
+            modalContent.appendChild(buttonContainer);
+            modalOverlay.appendChild(modalContent);
+            modalContainer.appendChild(modalOverlay);
+
+            // Trigger fade in
+            setTimeout(() => modalOverlay.classList.add('active'), 10);
+        }
+
+        // 獲取當前台灣時間 (YYYY-MM-DD 和 HH:MM)
+        function getCurrentTaiwanDateTime() {
+            // 'sv-SE' locale format is 'YYYY-MM-DD HH:MM:SS', which is easy to parse
+            const taiwanDateTimeStr = new Date().toLocaleString('sv-SE', { timeZone: "Asia/Taipei" });
+            const [date, time] = taiwanDateTimeStr.split(" ");
+            return {
+                date: date,
+                time: time.slice(0, 5) // Return only HH:MM
+            };
+        }
+
+        // 設置今天的日期為台灣時間
+        const nowInTaiwan = getCurrentTaiwanDateTime();
+        document.getElementById('selectedDate').value = nowInTaiwan.date;
+        document.getElementById('feedTime').value = nowInTaiwan.time;
+        document.getElementById('feedTimeManual').value = nowInTaiwan.time;
+
+        // 設置預設熱量
+        function setCalories(value) {
+            document.getElementById('caloriesPerUnit').value = value;
+        }
+
+        // 切換餵食模式
+        function toggleFeedingMode() {
+            const mode = document.querySelector('input[name="feedingMode"]:checked').value;
+            const calculatedMode = document.getElementById('calculatedMode');
+            const manualMode = document.getElementById('manualMode');
+            
+            if (mode === 'manual') {
+                calculatedMode.classList.add('hidden');
+                manualMode.classList.remove('hidden');
+            } else {
+                calculatedMode.classList.remove('hidden');
+                manualMode.classList.add('hidden');
+            }
+        }
+
+        // 獲取當前選擇的日期
+        function getCurrentDate() {
+            return document.getElementById('selectedDate').value;
+        }
+
+        // 新增餵食記錄（計算模式）
+        function addFeedingRecord() {
+            const date = getCurrentDate();
+            const catName = document.getElementById('catName').value;
+            const feedTime = document.getElementById('feedTime').value;
+            const foodType = document.getElementById('foodType').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const caloriesPerUnit = parseFloat(document.getElementById('caloriesPerUnit').value);
+
+            if (!date || !feedTime || isNaN(amount) || isNaN(caloriesPerUnit) || amount <= 0 || caloriesPerUnit <= 0) {
+                showModal('請填寫所有欄位並確保輸入有效的正數！');
+                return;
+            }
+
+            const totalCalories = amount * caloriesPerUnit;
+            
+            if (!feedingRecords[date]) {
+                feedingRecords[date] = [];
+            }
+
+            const record = {
+                id: Date.now(),
+                time: feedTime,
+                cat: catName,
+                foodType: foodType,
+                amount: amount,
+                caloriesPerUnit: caloriesPerUnit,
+                totalCalories: totalCalories,
+                mode: 'calculated'
+            };
+
+            feedingRecords[date].push(record);
+            localStorage.setItem('feedingRecords', JSON.stringify(feedingRecords));
+
+            // 清空表單
+            document.getElementById('amount').value = '';
+            document.getElementById('caloriesPerUnit').value = '';
+            document.getElementById('feedTime').value = getCurrentTaiwanDateTime().time;
+
+            updateDisplay();
+        }
+
+        // 新增手動餵食記錄
+        function addManualFeedingRecord() {
+            const date = getCurrentDate();
+            const catName = document.getElementById('catNameManual').value;
+            const feedTime = document.getElementById('feedTimeManual').value;
+            const foodType = document.getElementById('foodTypeManual').value;
+            const totalCalories = parseFloat(document.getElementById('totalCalories').value);
+
+            if (!date || !feedTime || isNaN(totalCalories) || totalCalories <= 0) {
+                showModal('請填寫所有欄位並確保總熱量為有效的正數！');
+                return;
+            }
+            
+            if (!feedingRecords[date]) {
+                feedingRecords[date] = [];
+            }
+
+            const record = {
+                id: Date.now(),
+                time: feedTime,
+                cat: catName,
+                foodType: foodType,
+                amount: '-',
+                caloriesPerUnit: '-',
+                totalCalories: totalCalories,
+                mode: 'manual'
+            };
+
+            feedingRecords[date].push(record);
+            localStorage.setItem('feedingRecords', JSON.stringify(feedingRecords));
+
+            // 清空表單
+            document.getElementById('totalCalories').value = '';
+            document.getElementById('feedTimeManual').value = getCurrentTaiwanDateTime().time;
+
+            updateDisplay();
+        }
+
+        // 刪除記錄
+        function deleteRecord(date, recordId) {
+            if (feedingRecords[date]) {
+                feedingRecords[date] = feedingRecords[date].filter(record => record.id !== recordId);
+                if (feedingRecords[date].length === 0) {
+                    delete feedingRecords[date];
+                }
+                localStorage.setItem('feedingRecords', JSON.stringify(feedingRecords));
+                updateDisplay();
+            }
+        }
+
+        // 更新食物類型
+        function updateFoodType(date, recordId, newFoodType) {
+            if (feedingRecords[date]) {
+                const record = feedingRecords[date].find(r => r.id === recordId);
+                if (record) {
+                    record.foodType = newFoodType;
+                    localStorage.setItem('feedingRecords', JSON.stringify(feedingRecords));
+                    updateCalorieStats(feedingRecords[date]);
+                }
+            }
+        }
+
+        // 更新顯示
+        function updateDisplay() {
+            const date = getCurrentDate();
+            const records = feedingRecords[date] || [];
+            
+            // 更新記錄表格
+            const tableBody = document.getElementById('recordsTable');
+            tableBody.innerHTML = '';
+
+            records.sort((a, b) => a.time.localeCompare(b.time));
+
+            records.forEach(record => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                const modeIcon = record.mode === 'manual' ? '✋' : '📊';
+                row.innerHTML = `
+                    <td class="border border-gray-200 px-4 py-3">${record.time}</td>
+                    <td class="border border-gray-200 px-4 py-3">${record.cat}</td>
+                    <td class="border border-gray-200 px-4 py-3">
+                        ${modeIcon} 
+                        <select onchange="updateFoodType('${date}', ${record.id}, this.value)" class="ml-2 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-purple-500">
+                            <option value="乾糧" ${record.foodType === '乾糧' ? 'selected' : ''}>🥘 乾糧</option>
+                            <option value="罐罐" ${record.foodType === '罐罐' ? 'selected' : ''}>🥫 罐罐</option>
+                            <option value="其他" ${record.foodType === '其他' ? 'selected' : ''}>🍖 其他</option>
+                        </select>
+                    </td>
+                    <td class="border border-gray-200 px-4 py-3">${record.amount}</td>
+                    <td class="border border-gray-200 px-4 py-3">${record.caloriesPerUnit}</td>
+                    <td class="border border-gray-200 px-4 py-3 font-medium">${record.totalCalories.toFixed(3)} 卡</td>
+                    <td class="border border-gray-200 px-4 py-3">
+                        <button onclick="deleteRecord('${date}', ${record.id})" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm">
+                            刪除
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // 更新熱量統計
+            updateCalorieStats(records);
+        }
+
+        // 更新熱量統計
+        function updateCalorieStats(records) {
+            const stats = {
+                小齁: { 乾糧: 0, 罐罐: 0, 其他: 0 },
+                小樾: { 乾糧: 0, 罐罐: 0, 其他: 0 }
+            };
+
+            records.forEach(record => {
+                stats[record.cat][record.foodType] += record.totalCalories;
+            });
+
+            // 更新小齁統計
+            document.getElementById('xiaohe-dry').textContent = stats.小齁.乾糧.toFixed(3) + ' 卡';
+            document.getElementById('xiaohe-wet').textContent = stats.小齁.罐罐.toFixed(3) + ' 卡';
+            document.getElementById('xiaohe-other').textContent = stats.小齁.其他.toFixed(3) + ' 卡';
+            document.getElementById('xiaohe-total').textContent = (stats.小齁.乾糧 + stats.小齁.罐罐 + stats.小齁.其他).toFixed(3) + ' 卡';
+
+            // 更新小樾統計
+            document.getElementById('xiaoyue-dry').textContent = stats.小樾.乾糧.toFixed(3) + ' 卡';
+            document.getElementById('xiaoyue-wet').textContent = stats.小樾.罐罐.toFixed(3) + ' 卡';
+            document.getElementById('xiaoyue-other').textContent = stats.小樾.其他.toFixed(3) + ' 卡';
+            document.getElementById('xiaoyue-total').textContent = (stats.小樾.乾糧 + stats.小樾.罐罐 + stats.小樾.其他).toFixed(3) + ' 卡';
+        }
+
+        // 產生文字總結內容
+        function generateSummaryContent() {
+            const date = getCurrentDate();
+            const records = feedingRecords[date] || [];
+            
+            if (records.length === 0) {
+                return null;
+            }
+
+            let content = `貓咪餵食記錄 - ${date}\n`;
+            content += '='.repeat(50) + '\n\n';
+
+            records.sort((a, b) => a.time.localeCompare(b.time));
+
+            records.forEach(record => {
+                const modeText = record.mode === 'manual' ? '手動輸入' : '自動計算';
+                content += `時間: ${record.time}\n`;
+                content += `貓咪: ${record.cat}\n`;
+                content += `食物: ${record.foodType}\n`;
+                content += `模式: ${modeText}\n`;
+                if (record.mode === 'calculated') {
+                    content += `數量: ${record.amount}\n`;
+                    content += `每單位熱量: ${record.caloriesPerUnit}\n`;
+                }
+                content += `總熱量: ${record.totalCalories.toFixed(3)} 卡\n`;
+                content += '-'.repeat(30) + '\n';
+            });
+
+            // 添加統計資訊
+            const stats = {
+                小齁: { 乾糧: 0, 罐罐: 0, 其他: 0 },
+                小樾: { 乾糧: 0, 罐罐: 0, 其他: 0 }
+            };
+            records.forEach(record => {
+                stats[record.cat][record.foodType] += record.totalCalories;
+            });
+
+            content += '\n每日熱量統計:\n';
+            content += '='.repeat(20) + '\n';
+            
+            ['小齁', '小樾'].forEach(cat => {
+                content += `${cat}:\n`;
+                content += `  乾糧: ${stats[cat].乾糧.toFixed(3)} 卡\n`;
+                content += `  罐罐: ${stats[cat].罐罐.toFixed(3)} 卡\n`;
+                content += `  其他: ${stats[cat].其他.toFixed(3)} 卡\n`;
+                content += `  總計: ${(stats[cat].乾糧 + stats[cat].罐罐 + stats[cat].其他).toFixed(3)} 卡\n\n`;
+            });
+
+            return content;
+        }
+
+        // 匯出文字檔
+        function exportToText() {
+            const date = getCurrentDate();
+            const content = generateSummaryContent();
+            
+            if (!content) {
+                showModal('今日沒有餵食記錄可匯出！');
+                return;
+            }
+
+            // 下載文字檔
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `貓咪餵食記錄_${date}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // 顯示文字總結
+        function showTextSummary() {
+            const content = generateSummaryContent();
+            
+            if (!content) {
+                showModal('今日沒有餵食記錄！');
+                return;
+            }
+
+            // 創建彈窗顯示內容
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-2xl max-h-[80vh] overflow-auto m-4 modal-content">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">📋 餵食記錄總結</h3>
+                        <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+                    </div>
+                    <textarea readonly class="w-full h-64 p-3 border border-gray-300 rounded-lg font-mono text-sm resize-none" onclick="this.select()">${content}</textarea>
+                    <div class="mt-4 text-sm text-gray-600">
+                        點擊文字區域可全選內容，方便複製。
+                    </div>
+                </div>
+            `;
+            document.getElementById('modalContainer').appendChild(modal);
+        }
+
+        // 清空所有記錄
+        function clearAllRecords() {
+            showModal('確定要清空所有餵食記錄嗎？此操作無法復原！', true, () => {
+                feedingRecords = {};
+                localStorage.removeItem('feedingRecords');
+                updateDisplay();
+                showModal('所有記錄已清空！');
+            });
+        }
+
+        // 日期變更時更新顯示
+        document.getElementById('selectedDate').addEventListener('change', updateDisplay);
+
+        // 初始化顯示
+        updateDisplay();
+    </script>
+</body>
+</html>
+
+
