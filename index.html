@@ -57,11 +57,15 @@
             border-left: 5px solid;
         }
 
-        .morning {
+        .core-hours {
+            border-left-color: #4CAF50;
+        }
+
+        .leave-section {
             border-left-color: #FF9800;
         }
 
-        .afternoon {
+        .free-study {
             border-left-color: #2196F3;
         }
 
@@ -117,6 +121,30 @@
             background: #da190b;
         }
 
+        .btn.pause {
+            background: #FF9800;
+        }
+
+        .btn.pause:hover {
+            background: #F57C00;
+        }
+
+        .btn.leave {
+            background: #FF9800;
+        }
+
+        .btn.leave:hover {
+            background: #F57C00;
+        }
+
+        .btn.cancel {
+            background: #9E9E9E;
+        }
+
+        .btn.cancel:hover {
+            background: #757575;
+        }
+
         .btn:disabled {
             background: #cccccc;
             cursor: not-allowed;
@@ -125,6 +153,48 @@
 
         .sessions-list {
             margin-top: 20px;
+        }
+
+        .leave-status {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .leave-info {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 15px;
+            background: #E8F5E8;
+            border-radius: 8px;
+            color: #2E7D32;
+        }
+
+        .leave-info.on-leave {
+            background: #FFF3E0;
+            color: #E65100;
+        }
+
+        .leave-note {
+            margin: 15px 0;
+        }
+
+        .leave-note label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .leave-note input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .leave-note input:disabled {
+            background: #f5f5f5;
+            color: #999;
         }
 
         .session-item {
@@ -300,37 +370,57 @@
         </div>
 
         <div class="main-content">
-            <!-- 上午時段 -->
-            <div class="session-section morning">
+            <!-- 核心工作時段 -->
+            <div class="session-section core-hours">
                 <div class="section-title">
-                    <span class="icon">🌅</span>
-                    上午時段 (8:00 - 12:00)
+                    <span class="icon">💼</span>
+                    核心工作時段 (8:00 - 17:00)
                 </div>
-                <div class="timer-display" id="morningTimer">00:00:00</div>
+                <div class="timer-display" id="coreTimer">00:00:00</div>
                 <div class="timer-controls">
-                    <button class="btn" id="morningStart">開始</button>
-                    <button class="btn stop" id="morningStop" disabled>停止</button>
+                    <button class="btn" id="coreStart">開始</button>
+                    <button class="btn pause" id="corePause" disabled>暫停</button>
+                    <button class="btn stop" id="coreStop" disabled>停止</button>
                 </div>
                 <div class="sessions-list">
-                    <h4>今日上午時段紀錄：</h4>
-                    <div id="morningSessions"></div>
+                    <h4>今日核心時段紀錄：</h4>
+                    <div id="coreSessions"></div>
                 </div>
             </div>
 
-            <!-- 下午時段 -->
-            <div class="session-section afternoon">
+            <!-- 請假功能 -->
+            <div class="session-section leave-section">
                 <div class="section-title">
-                    <span class="icon">☀️</span>
-                    下午時段 (13:00 - 19:00)
+                    <span class="icon">📋</span>
+                    請假管理
                 </div>
-                <div class="timer-display" id="afternoonTimer">00:00:00</div>
+                <div class="leave-status" id="leaveStatus">
+                    <div class="leave-info">目前狀態：正常工作</div>
+                </div>
                 <div class="timer-controls">
-                    <button class="btn" id="afternoonStart">開始</button>
-                    <button class="btn stop" id="afternoonStop" disabled>停止</button>
+                    <button class="btn leave" id="submitLeave">申請請假</button>
+                    <button class="btn cancel" id="cancelLeave" disabled>取消請假</button>
+                </div>
+                <div class="leave-note">
+                    <label for="leaveReason">請假原因：</label>
+                    <input type="text" id="leaveReason" placeholder="請輸入請假原因" disabled>
+                </div>
+            </div>
+
+            <!-- 自由學習時段 -->
+            <div class="session-section free-study">
+                <div class="section-title">
+                    <span class="icon">📚</span>
+                    自由學習時段 (不限時間)
+                </div>
+                <div class="timer-display" id="freeTimer">00:00:00</div>
+                <div class="timer-controls">
+                    <button class="btn" id="freeStart">開始</button>
+                    <button class="btn stop" id="freeStop" disabled>停止</button>
                 </div>
                 <div class="sessions-list">
-                    <h4>今日下午時段紀錄：</h4>
-                    <div id="afternoonSessions"></div>
+                    <h4>今日自由學習紀錄：</h4>
+                    <div id="freeSessions"></div>
                 </div>
             </div>
 
@@ -339,12 +429,12 @@
                 <div class="summary-title">📊 今日學習統計</div>
                 <div class="time-stats">
                     <div class="stat-item">
-                        <div class="stat-label">上午總時數</div>
-                        <div class="stat-value" id="morningTotal">0小時0分</div>
+                        <div class="stat-label">核心工作時數</div>
+                        <div class="stat-value" id="coreTotal">0小時0分</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-label">下午總時數</div>
-                        <div class="stat-value" id="afternoonTotal">0小時0分</div>
+                        <div class="stat-label">自由學習時數</div>
+                        <div class="stat-value" id="freeTotal">0小時0分</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-label">全日總計</div>
@@ -371,12 +461,15 @@
 
     <script>
         // 全域變數
-        let morningStartTime = null;
-        let afternoonStartTime = null;
-        let morningElapsed = 0;
-        let afternoonElapsed = 0;
-        let morningInterval = null;
-        let afternoonInterval = null;
+        let coreStartTime = null;
+        let freeStartTime = null;
+        let coreElapsed = 0;
+        let freeElapsed = 0;
+        let coreInterval = null;
+        let freeInterval = null;
+        let corePaused = false;
+        let corePausedTime = 0;
+        let leaveRequest = null;
         
         // Google Sheets 配置 (現在使用 Vercel Serverless Functions)
         // const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx8zLCn46cQfIY4srE1_dwsZcfjuL182jLgwoeOm8EuhnkiRHlfIiYhLE6oaZ7Aj2pm/exec';
@@ -387,12 +480,16 @@
             updateDateDisplay();
             loadTodayData();
             updateDisplay();
+            checkLeaveStatus();
             
             // 綁定事件
-            document.getElementById('morningStart').addEventListener('click', () => startTimer('morning'));
-            document.getElementById('morningStop').addEventListener('click', () => stopTimer('morning'));
-            document.getElementById('afternoonStart').addEventListener('click', () => startTimer('afternoon'));
-            document.getElementById('afternoonStop').addEventListener('click', () => stopTimer('afternoon'));
+            document.getElementById('coreStart').addEventListener('click', () => startTimer('core'));
+            document.getElementById('corePause').addEventListener('click', () => pauseTimer('core'));
+            document.getElementById('coreStop').addEventListener('click', () => stopTimer('core'));
+            document.getElementById('freeStart').addEventListener('click', () => startTimer('free'));
+            document.getElementById('freeStop').addEventListener('click', () => stopTimer('free'));
+            document.getElementById('submitLeave').addEventListener('click', submitLeaveRequest);
+            document.getElementById('cancelLeave').addEventListener('click', cancelLeaveRequest);
         });
 
         // 更新日期顯示
@@ -427,76 +524,188 @@
             const now = new Date();
             const currentHour = now.getHours();
             
-            // 檢查時間段是否正確
-            if (period === 'morning' && (currentHour < 8 || currentHour >= 12)) {
-                alert('上午時段為 8:00-12:00，請在正確時間內使用');
-                return;
+            if (period === 'core') {
+                // 檢查核心工作時段
+                if (currentHour < 8 || currentHour >= 17) {
+                    if (!leaveRequest) {
+                        alert('核心工作時段為 8:00-17:00，請先申請請假或使用自由學習時段');
+                        return;
+                    }
+                }
+                
+                if (corePaused) {
+                    // 恢復計時
+                    coreStartTime = Date.now() - corePausedTime;
+                    corePaused = false;
+                    document.getElementById('coreStart').disabled = true;
+                    document.getElementById('corePause').disabled = false;
+                    document.getElementById('coreStop').disabled = false;
+                } else {
+                    // 新開始計時
+                    coreStartTime = Date.now();
+                    document.getElementById('coreStart').disabled = true;
+                    document.getElementById('corePause').disabled = false;
+                    document.getElementById('coreStop').disabled = false;
+                }
+                
+                coreInterval = setInterval(() => {
+                    const elapsed = coreElapsed + Math.floor((Date.now() - coreStartTime) / 1000);
+                    document.getElementById('coreTimer').textContent = formatTime(elapsed);
+                }, 1000);
+                
+            } else if (period === 'free') {
+                // 自由學習時段無時間限制
+                freeStartTime = Date.now();
+                document.getElementById('freeStart').disabled = true;
+                document.getElementById('freeStop').disabled = false;
+                
+                freeInterval = setInterval(() => {
+                    const elapsed = freeElapsed + Math.floor((Date.now() - freeStartTime) / 1000);
+                    document.getElementById('freeTimer').textContent = formatTime(elapsed);
+                }, 1000);
             }
-            if (period === 'afternoon' && (currentHour < 13 || currentHour >= 19)) {
-                alert('下午時段為 13:00-19:00，請在正確時間內使用');
-                return;
-            }
+        }
 
-            if (period === 'morning') {
-                morningStartTime = Date.now();
-                document.getElementById('morningStart').disabled = true;
-                document.getElementById('morningStop').disabled = false;
-                
-                morningInterval = setInterval(() => {
-                    const elapsed = morningElapsed + Math.floor((Date.now() - morningStartTime) / 1000);
-                    document.getElementById('morningTimer').textContent = formatTime(elapsed);
-                }, 1000);
-            } else {
-                afternoonStartTime = Date.now();
-                document.getElementById('afternoonStart').disabled = true;
-                document.getElementById('afternoonStop').disabled = false;
-                
-                afternoonInterval = setInterval(() => {
-                    const elapsed = afternoonElapsed + Math.floor((Date.now() - afternoonStartTime) / 1000);
-                    document.getElementById('afternoonTimer').textContent = formatTime(elapsed);
-                }, 1000);
+        // 暫停計時
+        function pauseTimer(period) {
+            if (period === 'core' && coreStartTime) {
+                corePausedTime = Date.now() - coreStartTime;
+                corePaused = true;
+                clearInterval(coreInterval);
+                document.getElementById('coreStart').disabled = false;
+                document.getElementById('corePause').disabled = true;
             }
         }
 
         // 停止計時
         function stopTimer(period) {
-            if (period === 'morning') {
-                if (morningStartTime) {
-                    const sessionDuration = Math.floor((Date.now() - morningStartTime) / 1000);
-                    morningElapsed += sessionDuration;
-                    saveSession('morning', morningStartTime, Date.now(), sessionDuration);
-                    morningStartTime = null;
+            if (period === 'core') {
+                if (coreStartTime) {
+                    let sessionDuration;
+                    if (corePaused) {
+                        sessionDuration = Math.floor(corePausedTime / 1000);
+                    } else {
+                        sessionDuration = Math.floor((Date.now() - coreStartTime) / 1000);
+                    }
+                    coreElapsed += sessionDuration;
+                    saveSession('core', coreStartTime, Date.now(), sessionDuration);
+                    coreStartTime = null;
+                    corePaused = false;
+                    corePausedTime = 0;
                 }
                 
-                clearInterval(morningInterval);
-                document.getElementById('morningStart').disabled = false;
-                document.getElementById('morningStop').disabled = true;
-                document.getElementById('morningTimer').textContent = formatTime(morningElapsed);
-            } else {
-                if (afternoonStartTime) {
-                    const sessionDuration = Math.floor((Date.now() - afternoonStartTime) / 1000);
-                    afternoonElapsed += sessionDuration;
-                    saveSession('afternoon', afternoonStartTime, Date.now(), sessionDuration);
-                    afternoonStartTime = null;
+                clearInterval(coreInterval);
+                document.getElementById('coreStart').disabled = false;
+                document.getElementById('corePause').disabled = true;
+                document.getElementById('coreStop').disabled = true;
+                document.getElementById('coreTimer').textContent = formatTime(coreElapsed);
+                
+            } else if (period === 'free') {
+                if (freeStartTime) {
+                    const sessionDuration = Math.floor((Date.now() - freeStartTime) / 1000);
+                    freeElapsed += sessionDuration;
+                    saveSession('free', freeStartTime, Date.now(), sessionDuration);
+                    freeStartTime = null;
                 }
                 
-                clearInterval(afternoonInterval);
-                document.getElementById('afternoonStart').disabled = false;
-                document.getElementById('afternoonStop').disabled = true;
-                document.getElementById('afternoonTimer').textContent = formatTime(afternoonElapsed);
+                clearInterval(freeInterval);
+                document.getElementById('freeStart').disabled = false;
+                document.getElementById('freeStop').disabled = true;
+                document.getElementById('freeTimer').textContent = formatTime(freeElapsed);
             }
             
             updateDisplay();
             displaySessions();
         }
 
+        // 請假功能
+        function submitLeaveRequest() {
+            const reason = document.getElementById('leaveReason').value.trim();
+            if (!reason) {
+                alert('請輸入請假原因');
+                return;
+            }
+            
+            const now = new Date();
+            leaveRequest = {
+                reason: reason,
+                startTime: now.toLocaleTimeString('zh-TW'),
+                date: now.toDateString()
+            };
+            
+            // 保存請假記錄
+            const today = new Date().toDateString();
+            const leaves = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+            if (!leaves[today]) {
+                leaves[today] = [];
+            }
+            leaves[today].push(leaveRequest);
+            localStorage.setItem('leaveRequests', JSON.stringify(leaves));
+            
+            // 更新UI
+            document.getElementById('submitLeave').disabled = true;
+            document.getElementById('cancelLeave').disabled = false;
+            document.getElementById('leaveReason').disabled = true;
+            
+            updateLeaveStatus();
+            alert('請假申請已提交');
+        }
+
+        function cancelLeaveRequest() {
+            if (leaveRequest) {
+                // 移除最後一個請假記錄
+                const today = new Date().toDateString();
+                const leaves = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+                if (leaves[today] && leaves[today].length > 0) {
+                    leaves[today].pop();
+                    localStorage.setItem('leaveRequests', JSON.stringify(leaves));
+                }
+                
+                leaveRequest = null;
+                
+                // 更新UI
+                document.getElementById('submitLeave').disabled = false;
+                document.getElementById('cancelLeave').disabled = true;
+                document.getElementById('leaveReason').disabled = false;
+                document.getElementById('leaveReason').value = '';
+                
+                updateLeaveStatus();
+                alert('請假申請已取消');
+            }
+        }
+
+        function updateLeaveStatus() {
+            const statusEl = document.querySelector('.leave-info');
+            if (leaveRequest) {
+                statusEl.textContent = `目前狀態：請假中 (${leaveRequest.reason})`;
+                statusEl.classList.add('on-leave');
+            } else {
+                statusEl.textContent = '目前狀態：正常工作';
+                statusEl.classList.remove('on-leave');
+            }
+        }
+
+        function checkLeaveStatus() {
+            const today = new Date().toDateString();
+            const leaves = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+            if (leaves[today] && leaves[today].length > 0) {
+                leaveRequest = leaves[today][leaves[today].length - 1];
+                document.getElementById('leaveReason').value = leaveRequest.reason;
+                document.getElementById('submitLeave').disabled = true;
+                document.getElementById('cancelLeave').disabled = false;
+                document.getElementById('leaveReason').disabled = true;
+            } else {
+                document.getElementById('leaveReason').disabled = false;
+            }
+            updateLeaveStatus();
+        }
         // 儲存單次學習記錄
         function saveSession(period, startTime, endTime, duration) {
             const today = new Date().toDateString();
             const sessions = JSON.parse(localStorage.getItem('studySessions')) || {};
             
             if (!sessions[today]) {
-                sessions[today] = { morning: [], afternoon: [] };
+                sessions[today] = { core: [], free: [], morning: [], afternoon: [] };
             }
             
             const session = {
@@ -505,6 +714,11 @@
                 duration: duration
             };
             
+            // 確保舊資料結構的相容性
+            if (!sessions[today][period]) {
+                sessions[today][period] = [];
+            }
+            
             sessions[today][period].push(session);
             localStorage.setItem('studySessions', JSON.stringify(sessions));
             
@@ -512,6 +726,23 @@
             sendToGoogleSheets(today, period, session);
             
             displaySessions();
+        }
+
+        // 更新同步狀態
+        function updateSyncStatus(status) {
+            const syncStatusEl = document.getElementById('syncStatus');
+            if (syncStatusEl) {
+                if (status === 'success') {
+                    syncStatusEl.textContent = '✅ 已同步到 Google Sheets';
+                    syncStatusEl.style.color = '#4CAF50';
+                } else if (status === 'error') {
+                    syncStatusEl.textContent = '❌ 同步失敗';
+                    syncStatusEl.style.color = '#f44336';
+                } else if (status === 'loading') {
+                    syncStatusEl.textContent = '🔄 同步中...';
+                    syncStatusEl.style.color = '#FF9800';
+                }
+            }
         }
 
         // 發送資料到 Google Sheets
@@ -677,8 +908,17 @@
             const sessions = JSON.parse(localStorage.getItem('studySessions')) || {};
             
             if (sessions[today]) {
-                morningElapsed = sessions[today].morning.reduce((total, session) => total + session.duration, 0);
-                afternoonElapsed = sessions[today].afternoon.reduce((total, session) => total + session.duration, 0);
+                // 載入新的資料結構
+                coreElapsed = (sessions[today].core || []).reduce((total, session) => total + session.duration, 0);
+                freeElapsed = (sessions[today].free || []).reduce((total, session) => total + session.duration, 0);
+                
+                // 保持對舊資料的相容性
+                if (sessions[today].morning || sessions[today].afternoon) {
+                    const morningTotal = (sessions[today].morning || []).reduce((total, session) => total + session.duration, 0);
+                    const afternoonTotal = (sessions[today].afternoon || []).reduce((total, session) => total + session.duration, 0);
+                    // 將舊資料合併到核心時段
+                    coreElapsed += morningTotal + afternoonTotal;
+                }
             }
             
             displaySessions();
@@ -689,43 +929,51 @@
             const today = new Date().toDateString();
             const sessions = JSON.parse(localStorage.getItem('studySessions')) || {};
             
-            const morningSessionsEl = document.getElementById('morningSessions');
-            const afternoonSessionsEl = document.getElementById('afternoonSessions');
+            const coreSessionsEl = document.getElementById('coreSessions');
+            const freeSessionsEl = document.getElementById('freeSessions');
             
-            morningSessionsEl.innerHTML = '';
-            afternoonSessionsEl.innerHTML = '';
+            coreSessionsEl.innerHTML = '';
+            freeSessionsEl.innerHTML = '';
             
             if (sessions[today]) {
-                sessions[today].morning.forEach(session => {
+                // 顯示核心時段記錄
+                const coreData = sessions[today].core || [];
+                // 包含舊的上午/下午資料以保持相容性
+                const morningData = sessions[today].morning || [];
+                const afternoonData = sessions[today].afternoon || [];
+                const allCoreData = [...coreData, ...morningData, ...afternoonData];
+                
+                allCoreData.forEach(session => {
                     const div = document.createElement('div');
                     div.className = 'session-item';
                     div.innerHTML = `
                         <span>${session.start} - ${session.end}</span>
                         <span>${formatTimeChinese(session.duration)}</span>
                     `;
-                    morningSessionsEl.appendChild(div);
+                    coreSessionsEl.appendChild(div);
                 });
                 
-                sessions[today].afternoon.forEach(session => {
+                // 顯示自由學習記錄
+                (sessions[today].free || []).forEach(session => {
                     const div = document.createElement('div');
                     div.className = 'session-item';
                     div.innerHTML = `
                         <span>${session.start} - ${session.end}</span>
                         <span>${formatTimeChinese(session.duration)}</span>
                     `;
-                    afternoonSessionsEl.appendChild(div);
+                    freeSessionsEl.appendChild(div);
                 });
             }
         }
 
         // 更新顯示
         function updateDisplay() {
-            document.getElementById('morningTimer').textContent = formatTime(morningElapsed);
-            document.getElementById('afternoonTimer').textContent = formatTime(afternoonElapsed);
+            document.getElementById('coreTimer').textContent = formatTime(coreElapsed);
+            document.getElementById('freeTimer').textContent = formatTime(freeElapsed);
             
-            document.getElementById('morningTotal').textContent = formatTimeChinese(morningElapsed);
-            document.getElementById('afternoonTotal').textContent = formatTimeChinese(afternoonElapsed);
-            document.getElementById('dailyTotal').textContent = formatTimeChinese(morningElapsed + afternoonElapsed);
+            document.getElementById('coreTotal').textContent = formatTimeChinese(coreElapsed);
+            document.getElementById('freeTotal').textContent = formatTimeChinese(freeElapsed);
+            document.getElementById('dailyTotal').textContent = formatTimeChinese(coreElapsed + freeElapsed);
         }
 
         // 清除所有資料
@@ -736,33 +984,49 @@
                 delete sessions[today];
                 localStorage.setItem('studySessions', JSON.stringify(sessions));
                 
-                morningElapsed = 0;
-                afternoonElapsed = 0;
+                // 清除請假記錄
+                const leaves = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+                delete leaves[today];
+                localStorage.setItem('leaveRequests', JSON.stringify(leaves));
+                
+                coreElapsed = 0;
+                freeElapsed = 0;
+                leaveRequest = null;
                 
                 // 停止所有計時器
-                if (morningInterval) {
-                    clearInterval(morningInterval);
-                    morningStartTime = null;
-                    document.getElementById('morningStart').disabled = false;
-                    document.getElementById('morningStop').disabled = true;
+                if (coreInterval) {
+                    clearInterval(coreInterval);
+                    coreStartTime = null;
+                    corePaused = false;
+                    corePausedTime = 0;
+                    document.getElementById('coreStart').disabled = false;
+                    document.getElementById('corePause').disabled = true;
+                    document.getElementById('coreStop').disabled = true;
                 }
-                if (afternoonInterval) {
-                    clearInterval(afternoonInterval);
-                    afternoonStartTime = null;
-                    document.getElementById('afternoonStart').disabled = false;
-                    document.getElementById('afternoonStop').disabled = true;
+                if (freeInterval) {
+                    clearInterval(freeInterval);
+                    freeStartTime = null;
+                    document.getElementById('freeStart').disabled = false;
+                    document.getElementById('freeStop').disabled = true;
                 }
+                
+                // 重置請假狀態
+                document.getElementById('submitLeave').disabled = false;
+                document.getElementById('cancelLeave').disabled = true;
+                document.getElementById('leaveReason').disabled = false;
+                document.getElementById('leaveReason').value = '';
                 
                 updateDisplay();
                 displaySessions();
+                updateLeaveStatus();
             }
         }
 
         // 頁面關閉前保存資料
         window.addEventListener('beforeunload', function() {
-            if (morningStartTime || afternoonStartTime) {
-                if (morningStartTime) stopTimer('morning');
-                if (afternoonStartTime) stopTimer('afternoon');
+            if (coreStartTime || freeStartTime) {
+                if (coreStartTime) stopTimer('core');
+                if (freeStartTime) stopTimer('free');
             }
         });
     </script>
