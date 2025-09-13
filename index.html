@@ -361,6 +361,22 @@
                     <h3>📈 歷史學習記錄</h3>
                     <button class="btn" id="loadHistoryBtn" onclick="toggleHistory()">查看歷史記錄</button>
                 </div>
+                
+                <!-- 匯入匯出功能 -->
+                <div class="import-export-section" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.5); border-radius: 8px;">
+                    <h4 style="margin: 0 0 15px 0; color: #333; font-size: 1.1em;">📁 資料管理</h4>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: center;">
+                        <button class="btn" onclick="exportStudyRecords()" style="background: #2196F3;">
+                            📤 匯出讀書紀錄
+                        </button>
+                        <label for="importFile" class="btn" style="background: #FF9800; cursor: pointer; margin: 0;">
+                            📥 匯入讀書紀錄
+                        </label>
+                        <input type="file" id="importFile" accept=".json" onchange="importStudyRecords(event)" style="display: none;">
+                    </div>
+                    <div id="importExportMessage" style="margin-top: 10px; text-align: center; font-size: 0.9em; display: none;"></div>
+                </div>
+                
                 <div id="historyStatus" style="margin-top: 10px; font-size: 0.9em; text-align: center;"></div>
                 <div id="historySection" style="display: none;">
                     <div id="historyRecords"></div>
@@ -490,6 +506,11 @@
             displaySessions();
         }
 
+        // 生成唯一 ID
+        function generateUniqueId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
         // 儲存單次學習記錄
         function saveSession(period, startTime, endTime, duration) {
             const today = new Date().toDateString();
@@ -500,6 +521,7 @@
             }
             
             const session = {
+                id: generateUniqueId(),
                 start: new Date(startTime).toLocaleTimeString('zh-TW'),
                 end: new Date(endTime).toLocaleTimeString('zh-TW'),
                 duration: duration
@@ -545,6 +567,129 @@
                 updateSyncStatus('error');
             }
         }
+
+        // 更新同步狀態顯示
+        function updateSyncStatus(status) {
+            const statusEl = document.getElementById('syncStatus');
+            if (!statusEl) return;
+            
+            if (status === 'success') {
+                statusEl.innerHTML = '✅ 已同步到雲端';
+                statusEl.style.color = '#4CAF50';
+            } else if (status === 'error') {
+                statusEl.innerHTML = '❌ 同步失敗';
+                statusEl.style.color = '#f44336';
+            }
+            
+            // 3秒後清除狀態顯示
+            setTimeout(() => {
+                statusEl.innerHTML = '';
+            }, 3000);
+        }
+
+        // 匯出讀書紀錄
+        function exportStudyRecords() {
+            try {
+                const sessions = JSON.parse(localStorage.getItem('studySessions')) || {};
+                const dataStr = JSON.stringify(sessions, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `study-records-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                showMessage('✅ 讀書紀錄已成功匯出！', 'success');
+            } catch (error) {
+                console.error('匯出失敗:', error);
+                showMessage('❌ 匯出失敗，請稍後再試', 'error');
+            }
+        }
+
+        // 匯入讀書紀錄
+        function importStudyRecords(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    const existingSessions = JSON.parse(localStorage.getItem('studySessions')) || {};
+                    
+                    // 合併資料，避免重複 ID
+                    let mergedCount = 0;
+                    let duplicateCount = 0;
+                    
+                    Object.keys(importedData).forEach(date => {
+                        if (!existingSessions[date]) {
+                            existingSessions[date] = { morning: [], afternoon: [] };
+                        }
+                        
+                        ['morning', 'afternoon'].forEach(period => {
+                            if (importedData[date][period]) {
+                                importedData[date][period].forEach(session => {
+                                    // 如果沒有 ID，生成一個
+                                    if (!session.id) {
+                                        session.id = generateUniqueId();
+                                    }
+                                    
+                                    // 檢查是否已存在相同 ID
+                                    const existingIds = existingSessions[date][period].map(s => s.id);
+                                    if (!existingIds.includes(session.id)) {
+                                        existingSessions[date][period].push(session);
+                                        mergedCount++;
+                                    } else {
+                                        duplicateCount++;
+                                    }
+                                });
+                            }
+                        });
+                    });
+                    
+                    localStorage.setItem('studySessions', JSON.stringify(existingSessions));
+                    
+                    // 如果匯入的是今日資料，更新顯示
+                    const today = new Date().toDateString();
+                    if (importedData[today]) {
+                        loadTodayData();
+                        updateDisplay();
+                        displaySessions();
+                    }
+                    
+                    showMessage(`✅ 匯入成功！新增 ${mergedCount} 筆紀錄${duplicateCount > 0 ? `，跳過 ${duplicateCount} 筆重複紀錄` : ''}`, 'success');
+                    
+                } catch (error) {
+                    console.error('匯入失敗:', error);
+                    showMessage('❌ 匯入失敗，請確認檔案格式正確', 'error');
+                }
+                
+                // 清除檔案選擇
+                event.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // 顯示訊息
+        function showMessage(message, type) {
+            const messageEl = document.getElementById('importExportMessage');
+            if (messageEl) {
+                messageEl.textContent = message;
+                messageEl.style.color = type === 'success' ? '#4CAF50' : '#f44336';
+                messageEl.style.display = 'block';
+                
+                // 3秒後隱藏訊息
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 3000);
+            }
+        }
+
         // 從 Google Sheets 載入歷史記錄
         async function loadHistoryFromGoogleSheets() {
             try {
