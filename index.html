@@ -378,9 +378,9 @@
         let morningInterval = null;
         let afternoonInterval = null;
         
-        // Google Sheets 配置
-        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx8zLCn46cQfIY4srE1_dwsZcfjuL182jLgwoeOm8EuhnkiRHlfIiYhLE6oaZ7Aj2pm/exec';
-        const GOOGLE_SHEETS_ID = '1K6_nHeF2pLyVIFPzAWy3BjhpzXJrnjtE2uVTCxAmDlE';
+        // Google Sheets 配置 (現在使用 Vercel Serverless Functions)
+        // const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx8zLCn46cQfIY4srE1_dwsZcfjuL182jLgwoeOm8EuhnkiRHlfIiYhLE6oaZ7Aj2pm/exec';
+        // const GOOGLE_SHEETS_ID = '1K6_nHeF2pLyVIFPzAWy3BjhpzXJrnjtE2uVTCxAmDlE';
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -515,52 +515,51 @@
         }
 
         // 發送資料到 Google Sheets
-      async function sendToGoogleSheets(date, period, session) {
-    try {
-        const data = {
-            action: 'addRecord',
-            date: date,
-            period: period,
-            startTime: session.start,
-            endTime: session.end,
-            duration: formatTimeChinese(session.duration),
-            durationSeconds: session.duration
-        };
+        async function sendToGoogleSheets(date, period, session) {
+            try {
+                const data = {
+                    date: date,
+                    period: period,
+                    startTime: session.start,
+                    endTime: session.end,
+                    duration: formatTimeChinese(session.duration),
+                    durationSeconds: session.duration
+                };
 
-        await fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',  // 
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
+                const response = await fetch('/api/sheet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
 
-        // 在 no-cors 模式下假設成功
-        updateSyncStatus('success');
-        console.log('已發送到 Google Sheets');
-    } catch (error) {
-        console.error('發送到 Google Sheets 失敗:', error);
-        updateSyncStatus('error');
-    }
-}
+                if (response.ok) {
+                    updateSyncStatus('success');
+                    console.log('已發送到 Google Sheets');
+                } else {
+                    throw new Error('伺服器回應錯誤');
+                }
+            } catch (error) {
+                console.error('發送到 Google Sheets 失敗:', error);
+                updateSyncStatus('error');
+            }
+        }
         // 從 Google Sheets 載入歷史記錄
         async function loadHistoryFromGoogleSheets() {
             try {
                 updateHistoryStatus('loading');
                 
-                const url = `${GOOGLE_SHEETS_URL}?action=getHistory`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    mode: 'cors'
+                const response = await fetch('/api/sheet', {
+                    method: 'GET'
                 });
                 
                 if (!response.ok) {
                     throw new Error('網路錯誤');
                 }
                 
-                const data = await response.json();
-                displayHistory(data.records || []);
+                const result = await response.json();
+                displayHistory(result.data || []);
                 updateHistoryStatus('success');
             } catch (error) {
                 console.error('載入歷史記錄失敗:', error);
