@@ -65,6 +65,108 @@
             border-left-color: #2196F3;
         }
 
+        .leave-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid #9C27B0;
+        }
+
+        .status-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid #607D8B;
+        }
+
+        .leave-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .leave-select, .leave-input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .leave-select {
+            min-width: 150px;
+        }
+
+        .leave-input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .leave-btn {
+            background: #9C27B0;
+        }
+
+        .leave-btn:hover {
+            background: #7B1FA2;
+        }
+
+        .cancel-leave-btn {
+            background: #f44336;
+            margin-top: 10px;
+        }
+
+        .cancel-leave-btn:hover {
+            background: #da190b;
+        }
+
+        .leave-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .leave-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .leave-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .current-leave {
+            background: white;
+            border: 1px solid #9C27B0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .work-status {
+            display: flex;
+            align-items: center;
+            font-size: 1.2em;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .status-indicator {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        .status-text {
+            font-weight: bold;
+        }
+
         .section-title {
             font-size: 1.5em;
             font-weight: bold;
@@ -321,7 +423,7 @@
             <div class="session-section afternoon">
                 <div class="section-title">
                     <span class="icon">☀️</span>
-                    下午時段 (13:00 - 19:00)
+                    下午時段 (13:00 - 17:00)
                 </div>
                 <div class="timer-display" id="afternoonTimer">00:00:00</div>
                 <div class="timer-controls">
@@ -331,6 +433,43 @@
                 <div class="sessions-list">
                     <h4>今日下午時段紀錄：</h4>
                     <div id="afternoonSessions"></div>
+                </div>
+            </div>
+
+            <!-- 請假申請區域 -->
+            <div class="leave-section">
+                <div class="section-title">
+                    <span class="icon">📝</span>
+                    請假申請
+                </div>
+                <div class="leave-controls">
+                    <select id="leaveType" class="leave-select">
+                        <option value="">選擇請假類型</option>
+                        <option value="sick">病假</option>
+                        <option value="personal">事假</option>
+                        <option value="annual">年假</option>
+                        <option value="other">其他</option>
+                    </select>
+                    <input type="text" id="leaveReason" placeholder="請假事由" class="leave-input">
+                    <button class="btn leave-btn" onclick="submitLeaveRequest()">提交請假申請</button>
+                </div>
+                <div class="leave-status" id="leaveStatus"></div>
+                <div class="current-leave" id="currentLeave" style="display: none;">
+                    <h4>今日請假狀態：</h4>
+                    <div id="leaveDetails"></div>
+                    <button class="btn cancel-leave-btn" onclick="cancelLeaveRequest()">取消請假</button>
+                </div>
+            </div>
+
+            <!-- 工作狀態顯示 -->
+            <div class="status-section">
+                <div class="section-title">
+                    <span class="icon">📊</span>
+                    當前工作狀態
+                </div>
+                <div class="work-status" id="workStatus">
+                    <span class="status-indicator" id="statusIndicator">🟢</span>
+                    <span class="status-text" id="statusText">正常</span>
                 </div>
             </div>
 
@@ -377,6 +516,7 @@
         let afternoonElapsed = 0;
         let morningInterval = null;
         let afternoonInterval = null;
+        let statusCheckInterval = null;
         
         // Google Sheets 配置 (現在使用 Vercel Serverless Functions)
         // const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx8zLCn46cQfIY4srE1_dwsZcfjuL182jLgwoeOm8EuhnkiRHlfIiYhLE6oaZ7Aj2pm/exec';
@@ -387,6 +527,8 @@
             updateDateDisplay();
             loadTodayData();
             updateDisplay();
+            checkLeaveStatus();
+            startStatusMonitoring();
             
             // 綁定事件
             document.getElementById('morningStart').addEventListener('click', () => startTimer('morning'));
@@ -405,6 +547,173 @@
                 weekday: 'long'
             };
             document.getElementById('dateDisplay').textContent = now.toLocaleDateString('zh-TW', options);
+        }
+
+        // 開始狀態監控
+        function startStatusMonitoring() {
+            updateWorkStatus();
+            // 每分鐘檢查一次狀態
+            statusCheckInterval = setInterval(updateWorkStatus, 60000);
+        }
+
+        // 更新工作狀態
+        function updateWorkStatus() {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const isInCoreHours = currentHour >= 8 && currentHour < 17;
+            const isWorking = morningStartTime !== null || afternoonStartTime !== null;
+            const hasLeaveRequest = checkTodayLeaveRequest();
+
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+
+            if (!isInCoreHours) {
+                statusIndicator.textContent = '🌙';
+                statusText.textContent = '非工作時間';
+                statusIndicator.style.color = '#666';
+            } else if (hasLeaveRequest) {
+                statusIndicator.textContent = '📝';
+                statusText.textContent = '已請假';
+                statusIndicator.style.color = '#9C27B0';
+            } else if (isWorking) {
+                statusIndicator.textContent = '🟢';
+                statusText.textContent = '工作中';
+                statusIndicator.style.color = '#4CAF50';
+            } else {
+                statusIndicator.textContent = '🔴';
+                statusText.textContent = '曠職';
+                statusIndicator.style.color = '#f44336';
+            }
+        }
+
+        // 提交請假申請
+        function submitLeaveRequest() {
+            const leaveType = document.getElementById('leaveType').value;
+            const leaveReason = document.getElementById('leaveReason').value.trim();
+
+            if (!leaveType) {
+                showLeaveStatus('請選擇請假類型', 'error');
+                return;
+            }
+
+            if (!leaveReason) {
+                showLeaveStatus('請填寫請假事由', 'error');
+                return;
+            }
+
+            const today = new Date().toDateString();
+            const leaveRequest = {
+                date: today,
+                type: leaveType,
+                reason: leaveReason,
+                submittedAt: new Date().toISOString()
+            };
+
+            // 儲存到 localStorage
+            const leaveRequests = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+            leaveRequests[today] = leaveRequest;
+            localStorage.setItem('leaveRequests', JSON.stringify(leaveRequests));
+
+            // 發送到 Google Sheets
+            sendLeaveToGoogleSheets(leaveRequest);
+
+            // 重置表單
+            document.getElementById('leaveType').value = '';
+            document.getElementById('leaveReason').value = '';
+
+            showLeaveStatus('請假申請已提交', 'success');
+            checkLeaveStatus();
+            updateWorkStatus();
+        }
+
+        // 取消請假申請
+        function cancelLeaveRequest() {
+            if (!confirm('確定要取消今日的請假申請嗎？')) {
+                return;
+            }
+
+            const today = new Date().toDateString();
+            const leaveRequests = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+            
+            if (leaveRequests[today]) {
+                delete leaveRequests[today];
+                localStorage.setItem('leaveRequests', JSON.stringify(leaveRequests));
+                
+                // TODO: 發送取消請假的通知到 Google Sheets
+                
+                showLeaveStatus('請假申請已取消', 'success');
+                checkLeaveStatus();
+                updateWorkStatus();
+            }
+        }
+
+        // 檢查今日請假狀態
+        function checkLeaveStatus() {
+            const today = new Date().toDateString();
+            const leaveRequests = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+            const currentLeaveDiv = document.getElementById('currentLeave');
+            const leaveDetailsDiv = document.getElementById('leaveDetails');
+
+            if (leaveRequests[today]) {
+                const leave = leaveRequests[today];
+                leaveDetailsDiv.innerHTML = `
+                    <div><strong>請假類型:</strong> ${getLeaveTypeText(leave.type)}</div>
+                    <div><strong>請假事由:</strong> ${leave.reason}</div>
+                    <div><strong>申請時間:</strong> ${new Date(leave.submittedAt).toLocaleString('zh-TW')}</div>
+                `;
+                currentLeaveDiv.style.display = 'block';
+            } else {
+                currentLeaveDiv.style.display = 'none';
+            }
+        }
+
+        // 檢查今日是否有請假申請
+        function checkTodayLeaveRequest() {
+            const today = new Date().toDateString();
+            const leaveRequests = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+            return !!leaveRequests[today];
+        }
+
+        // 獲取請假類型文字
+        function getLeaveTypeText(type) {
+            const types = {
+                'sick': '病假',
+                'personal': '事假',
+                'annual': '年假',
+                'other': '其他'
+            };
+            return types[type] || type;
+        }
+
+        // 顯示請假狀態訊息
+        function showLeaveStatus(message, type) {
+            const statusDiv = document.getElementById('leaveStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `leave-status ${type}`;
+            
+            setTimeout(() => {
+                statusDiv.textContent = '';
+                statusDiv.className = 'leave-status';
+            }, 3000);
+        }
+
+        // 發送請假申請到 Google Sheets
+        async function sendLeaveToGoogleSheets(leaveRequest) {
+            try {
+                const response = await fetch('/api/leave', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(leaveRequest)
+                });
+
+                if (!response.ok) {
+                    console.error('發送請假申請到 Google Sheets 失敗');
+                }
+            } catch (error) {
+                console.error('發送請假申請失敗:', error);
+            }
         }
 
         // 格式化時間顯示
@@ -432,8 +741,8 @@
                 alert('上午時段為 8:00-12:00，請在正確時間內使用');
                 return;
             }
-            if (period === 'afternoon' && (currentHour < 13 || currentHour >= 19)) {
-                alert('下午時段為 13:00-19:00，請在正確時間內使用');
+            if (period === 'afternoon' && (currentHour < 13 || currentHour >= 17)) {
+                alert('下午時段為 13:00-17:00，請在正確時間內使用');
                 return;
             }
 
@@ -446,6 +755,7 @@
                     const elapsed = morningElapsed + Math.floor((Date.now() - morningStartTime) / 1000);
                     document.getElementById('morningTimer').textContent = formatTime(elapsed);
                 }, 1000);
+                updateWorkStatus();
             } else {
                 afternoonStartTime = Date.now();
                 document.getElementById('afternoonStart').disabled = true;
@@ -455,6 +765,7 @@
                     const elapsed = afternoonElapsed + Math.floor((Date.now() - afternoonStartTime) / 1000);
                     document.getElementById('afternoonTimer').textContent = formatTime(elapsed);
                 }, 1000);
+                updateWorkStatus();
             }
         }
 
@@ -488,6 +799,7 @@
             
             updateDisplay();
             displaySessions();
+            updateWorkStatus();
         }
 
         // 儲存單次學習記錄
@@ -730,11 +1042,16 @@
 
         // 清除所有資料
         function clearAllData() {
-            if (confirm('確定要清除今日所有學習紀錄嗎？')) {
+            if (confirm('確定要清除今日所有學習紀錄和請假申請嗎？')) {
                 const today = new Date().toDateString();
                 const sessions = JSON.parse(localStorage.getItem('studySessions')) || {};
+                const leaveRequests = JSON.parse(localStorage.getItem('leaveRequests')) || {};
+                
                 delete sessions[today];
+                delete leaveRequests[today];
+                
                 localStorage.setItem('studySessions', JSON.stringify(sessions));
+                localStorage.setItem('leaveRequests', JSON.stringify(leaveRequests));
                 
                 morningElapsed = 0;
                 afternoonElapsed = 0;
@@ -755,6 +1072,8 @@
                 
                 updateDisplay();
                 displaySessions();
+                checkLeaveStatus();
+                updateWorkStatus();
             }
         }
 
@@ -763,6 +1082,9 @@
             if (morningStartTime || afternoonStartTime) {
                 if (morningStartTime) stopTimer('morning');
                 if (afternoonStartTime) stopTimer('afternoon');
+            }
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
             }
         });
     </script>
