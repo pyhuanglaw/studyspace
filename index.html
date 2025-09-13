@@ -42,6 +42,30 @@
         .date-display {
             font-size: 1.2em;
             opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            font-size: 0.9em;
+            padding: 8px 16px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            border-color: rgba(255,255,255,0.6);
         }
 
         .main-content {
@@ -184,6 +208,49 @@
             background: #ff3838;
         }
 
+        .history-item {
+            background: rgba(255,255,255,0.1);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .history-date {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .history-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .history-stat {
+            background: rgba(255,255,255,0.1);
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .history-sessions {
+            margin-top: 10px;
+        }
+
+        .history-session-item {
+            background: rgba(255,255,255,0.05);
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 600px) {
             .timer-display {
                 font-size: 2em;
@@ -205,61 +272,76 @@
         <div class="header">
             <h1>📚 每日讀書時間紀錄</h1>
             <div class="date-display" id="dateDisplay"></div>
+            <div class="nav-buttons">
+                <button class="btn nav-btn" id="todayBtn" onclick="showTodayView()">今日紀錄</button>
+                <button class="btn nav-btn" id="historyBtn" onclick="showHistoryView()">歷史紀錄</button>
+            </div>
         </div>
 
         <div class="main-content">
-            <!-- 上午時段 -->
-            <div class="session-section morning">
-                <div class="section-title">
-                    <span class="icon">🌅</span>
-                    上午時段 (8:00 - 12:00)
+            <!-- 今日紀錄視圖 -->
+            <div id="todayView">
+                <!-- 上午時段 -->
+                <div class="session-section morning">
+                    <div class="section-title">
+                        <span class="icon">🌅</span>
+                        上午時段 (8:00 - 12:00)
+                    </div>
+                    <div class="timer-display" id="morningTimer">00:00:00</div>
+                    <div class="timer-controls">
+                        <button class="btn" id="morningStart">開始</button>
+                        <button class="btn stop" id="morningStop" disabled>停止</button>
+                    </div>
+                    <div class="sessions-list">
+                        <h4>今日上午時段紀錄：</h4>
+                        <div id="morningSessions"></div>
+                    </div>
                 </div>
-                <div class="timer-display" id="morningTimer">00:00:00</div>
-                <div class="timer-controls">
-                    <button class="btn" id="morningStart">開始</button>
-                    <button class="btn stop" id="morningStop" disabled>停止</button>
+
+                <!-- 下午時段 -->
+                <div class="session-section afternoon">
+                    <div class="section-title">
+                        <span class="icon">☀️</span>
+                        下午時段 (13:00 - 19:00)
+                    </div>
+                    <div class="timer-display" id="afternoonTimer">00:00:00</div>
+                    <div class="timer-controls">
+                        <button class="btn" id="afternoonStart">開始</button>
+                        <button class="btn stop" id="afternoonStop" disabled>停止</button>
+                    </div>
+                    <div class="sessions-list">
+                        <h4>今日下午時段紀錄：</h4>
+                        <div id="afternoonSessions"></div>
+                    </div>
                 </div>
-                <div class="sessions-list">
-                    <h4>今日上午時段紀錄：</h4>
-                    <div id="morningSessions"></div>
+
+                <!-- 每日統計 -->
+                <div class="summary-section">
+                    <div class="summary-title">📊 今日學習統計</div>
+                    <div class="time-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">上午總時數</div>
+                            <div class="stat-value" id="morningTotal">0小時0分</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">下午總時數</div>
+                            <div class="stat-value" id="afternoonTotal">0小時0分</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">全日總計</div>
+                            <div class="stat-value" id="dailyTotal">0小時0分</div>
+                        </div>
+                    </div>
+                    <button class="btn clear-btn" onclick="clearAllData()">清除今日紀錄</button>
                 </div>
             </div>
 
-            <!-- 下午時段 -->
-            <div class="session-section afternoon">
-                <div class="section-title">
-                    <span class="icon">☀️</span>
-                    下午時段 (13:00 - 19:00)
+            <!-- 歷史紀錄視圖 -->
+            <div id="historyView" style="display: none;">
+                <div class="summary-section">
+                    <div class="summary-title">📈 學習歷史紀錄</div>
+                    <div id="historyContent"></div>
                 </div>
-                <div class="timer-display" id="afternoonTimer">00:00:00</div>
-                <div class="timer-controls">
-                    <button class="btn" id="afternoonStart">開始</button>
-                    <button class="btn stop" id="afternoonStop" disabled>停止</button>
-                </div>
-                <div class="sessions-list">
-                    <h4>今日下午時段紀錄：</h4>
-                    <div id="afternoonSessions"></div>
-                </div>
-            </div>
-
-            <!-- 每日統計 -->
-            <div class="summary-section">
-                <div class="summary-title">📊 今日學習統計</div>
-                <div class="time-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">上午總時數</div>
-                        <div class="stat-value" id="morningTotal">0小時0分</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">下午總時數</div>
-                        <div class="stat-value" id="afternoonTotal">0小時0分</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">全日總計</div>
-                        <div class="stat-value" id="dailyTotal">0小時0分</div>
-                    </div>
-                </div>
-                <button class="btn clear-btn" onclick="clearAllData()">清除今日紀錄</button>
             </div>
         </div>
     </div>
@@ -278,6 +360,7 @@
             updateDateDisplay();
             loadTodayData();
             updateDisplay();
+            showTodayView(); // 預設顯示今日視圖
             
             // 綁定事件
             document.getElementById('morningStart').addEventListener('click', () => startTimer('morning'));
@@ -381,6 +464,31 @@
             displaySessions();
         }
 
+        // Google Sheets 設定
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx8zLCn46cQfIY4srE1_dwsZcfjuL182jLgwoeOm8EuhnkiRHlfIiYhLE6oaZ7Aj2pm/exec';
+        const GOOGLE_SHEETS_ID = '1K6_nHeF2pLyVIFPzAWy3BjhpzXJrnjtE2uVTCxAmDlE';
+
+        // 導出到 Google Sheets
+        async function exportToGoogleSheets(sessionData) {
+            try {
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sheetsId: GOOGLE_SHEETS_ID,
+                        data: sessionData
+                    })
+                });
+                
+                console.log('資料已成功導出到 Google Sheets');
+            } catch (error) {
+                console.error('導出到 Google Sheets 時發生錯誤:', error);
+            }
+        }
+
         // 儲存單次學習記錄
         function saveSession(period, startTime, endTime, duration) {
             const today = new Date().toDateString();
@@ -398,6 +506,19 @@
             
             sessions[today][period].push(session);
             localStorage.setItem('studySessions', JSON.stringify(sessions));
+            
+            // 準備 Google Sheets 導出資料
+            const exportData = {
+                date: new Date(startTime).toLocaleDateString('zh-TW'),
+                period: period === 'morning' ? '上午' : '下午',
+                startTime: session.start,
+                endTime: session.end,
+                duration: Math.floor(duration / 60), // 轉換為分鐘
+                durationText: formatTimeChinese(duration)
+            };
+            
+            // 異步導出到 Google Sheets
+            exportToGoogleSheets(exportData);
             
             displaySessions();
         }
@@ -496,6 +617,104 @@
                 if (afternoonStartTime) stopTimer('afternoon');
             }
         });
+
+        // 顯示今日視圖
+        function showTodayView() {
+            document.getElementById('todayView').style.display = 'block';
+            document.getElementById('historyView').style.display = 'none';
+            document.getElementById('todayBtn').classList.add('active');
+            document.getElementById('historyBtn').classList.remove('active');
+        }
+
+        // 顯示歷史視圖
+        function showHistoryView() {
+            document.getElementById('todayView').style.display = 'none';
+            document.getElementById('historyView').style.display = 'block';
+            document.getElementById('todayBtn').classList.remove('active');
+            document.getElementById('historyBtn').classList.add('active');
+            displayHistory();
+        }
+
+        // 顯示歷史紀錄
+        function displayHistory() {
+            const sessions = JSON.parse(localStorage.getItem('studySessions')) || {};
+            const historyContent = document.getElementById('historyContent');
+            
+            historyContent.innerHTML = '';
+            
+            const sortedDates = Object.keys(sessions).sort((a, b) => new Date(b) - new Date(a));
+            
+            if (sortedDates.length === 0) {
+                historyContent.innerHTML = '<p style="text-align: center; color: rgba(255,255,255,0.7);">尚無學習紀錄</p>';
+                return;
+            }
+            
+            sortedDates.forEach(date => {
+                const dayData = sessions[date];
+                const morningTotal = dayData.morning.reduce((total, session) => total + session.duration, 0);
+                const afternoonTotal = dayData.afternoon.reduce((total, session) => total + session.duration, 0);
+                const dailyTotal = morningTotal + afternoonTotal;
+                
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                let sessionsHtml = '';
+                
+                if (dayData.morning.length > 0) {
+                    sessionsHtml += '<div><strong>上午時段：</strong>';
+                    dayData.morning.forEach(session => {
+                        sessionsHtml += `
+                            <div class="history-session-item">
+                                <span>${session.start} - ${session.end}</span>
+                                <span>${formatTimeChinese(session.duration)}</span>
+                            </div>
+                        `;
+                    });
+                    sessionsHtml += '</div>';
+                }
+                
+                if (dayData.afternoon.length > 0) {
+                    sessionsHtml += '<div><strong>下午時段：</strong>';
+                    dayData.afternoon.forEach(session => {
+                        sessionsHtml += `
+                            <div class="history-session-item">
+                                <span>${session.start} - ${session.end}</span>
+                                <span>${formatTimeChinese(session.duration)}</span>
+                            </div>
+                        `;
+                    });
+                    sessionsHtml += '</div>';
+                }
+                
+                historyItem.innerHTML = `
+                    <div class="history-date">${new Date(date).toLocaleDateString('zh-TW', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                    })}</div>
+                    <div class="history-summary">
+                        <div class="history-stat">
+                            <div>上午總計</div>
+                            <div>${formatTimeChinese(morningTotal)}</div>
+                        </div>
+                        <div class="history-stat">
+                            <div>下午總計</div>
+                            <div>${formatTimeChinese(afternoonTotal)}</div>
+                        </div>
+                        <div class="history-stat">
+                            <div>全日總計</div>
+                            <div>${formatTimeChinese(dailyTotal)}</div>
+                        </div>
+                    </div>
+                    <div class="history-sessions">
+                        ${sessionsHtml}
+                    </div>
+                `;
+                
+                historyContent.appendChild(historyItem);
+            });
+        }
     </script>
 </body>
 </html>
