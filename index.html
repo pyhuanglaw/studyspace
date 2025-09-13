@@ -515,55 +515,35 @@
         }
 
         // 發送資料到 Google Sheets
-        async function sendToGoogleSheets(date, period, session) {
-            try {
-                const data = {
-                    action: 'addRecord',
-                    date: date,
-                    period: period,
-                    startTime: session.start,
-                    endTime: session.end,
-                    duration: formatTimeChinese(session.duration),
-                    durationSeconds: session.duration
-                };
+      async function sendToGoogleSheets(date, period, session) {
+    try {
+        const data = {
+            action: 'addRecord',
+            date: date,
+            period: period,
+            startTime: session.start,
+            endTime: session.end,
+            duration: formatTimeChinese(session.duration),
+            durationSeconds: session.duration
+        };
 
-                const response = await fetch(GOOGLE_SHEETS_URL, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
+        await fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',  // 
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
 
-                // 更新同步狀態指示器
-                updateSyncStatus('success');
-                console.log('已成功同步到 Google Sheets');
-            } catch (error) {
-                console.error('同步到 Google Sheets 失敗:', error);
-                updateSyncStatus('error');
-            }
-        }
-
-        // 更新同步狀態
-        function updateSyncStatus(status) {
-            const indicator = document.getElementById('syncStatus');
-            if (indicator) {
-                if (status === 'success') {
-                    indicator.textContent = '✅ 已同步';
-                    indicator.style.color = '#4CAF50';
-                } else {
-                    indicator.textContent = '❌ 同步失敗';
-                    indicator.style.color = '#f44336';
-                }
-                
-                // 3秒後清除狀態
-                setTimeout(() => {
-                    indicator.textContent = '';
-                }, 3000);
-            }
-        }
-
+        // 在 no-cors 模式下假設成功
+        updateSyncStatus('success');
+        console.log('已發送到 Google Sheets');
+    } catch (error) {
+        console.error('發送到 Google Sheets 失敗:', error);
+        updateSyncStatus('error');
+    }
+}
         // 從 Google Sheets 載入歷史記錄
         async function loadHistoryFromGoogleSheets() {
             try {
