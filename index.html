@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -184,6 +185,80 @@
             background: #ff3838;
         }
 
+        .history-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 25px;
+            border-left: 5px solid #9C27B0;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .history-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .history-day {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+        }
+
+        .history-date {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .history-date h4 {
+            margin: 0;
+            color: #333;
+        }
+
+        .daily-total {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .history-periods {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .history-period h5 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 1em;
+        }
+
+        .history-sessions {
+            margin-left: 15px;
+        }
+
+        .history-session {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 3px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+        }
+
         @media (max-width: 600px) {
             .timer-display {
                 font-size: 2em;
@@ -196,6 +271,23 @@
             .btn {
                 padding: 10px 20px;
                 font-size: 1em;
+            }
+            
+            .history-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .history-periods {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .history-date {
+                flex-direction: column;
+                gap: 5px;
+                text-align: center;
             }
         }
     </style>
@@ -260,6 +352,19 @@
                     </div>
                 </div>
                 <button class="btn clear-btn" onclick="clearAllData()">清除今日紀錄</button>
+                <div id="syncStatus" style="margin-top: 10px; font-size: 0.9em; text-align: center;"></div>
+            </div>
+            
+            <!-- 歷史記錄區域 -->
+            <div class="history-section">
+                <div class="history-header">
+                    <h3>📈 歷史學習記錄</h3>
+                    <button class="btn" id="loadHistoryBtn" onclick="toggleHistory()">查看歷史記錄</button>
+                </div>
+                <div id="historyStatus" style="margin-top: 10px; font-size: 0.9em; text-align: center;"></div>
+                <div id="historySection" style="display: none;">
+                    <div id="historyRecords"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -272,6 +377,10 @@
         let afternoonElapsed = 0;
         let morningInterval = null;
         let afternoonInterval = null;
+        
+        // Google Sheets 配置
+        const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbx8zLCn46cQfIY4srE1_dwsZcfjuL182jLgwoeOm8EuhnkiRHlfIiYhLE6oaZ7Aj2pm/exec';
+        const GOOGLE_SHEETS_ID = '1K6_nHeF2pLyVIFPzAWy3BjhpzXJrnjtE2uVTCxAmDlE';
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -399,7 +508,188 @@
             sessions[today][period].push(session);
             localStorage.setItem('studySessions', JSON.stringify(sessions));
             
+            // 自動匯出到 Google Sheets
+            sendToGoogleSheets(today, period, session);
+            
             displaySessions();
+        }
+
+        // 發送資料到 Google Sheets
+        async function sendToGoogleSheets(date, period, session) {
+            try {
+                const data = {
+                    action: 'addRecord',
+                    date: date,
+                    period: period,
+                    startTime: session.start,
+                    endTime: session.end,
+                    duration: formatTimeChinese(session.duration),
+                    durationSeconds: session.duration
+                };
+
+                const response = await fetch(GOOGLE_SHEETS_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                // 更新同步狀態指示器
+                updateSyncStatus('success');
+                console.log('已成功同步到 Google Sheets');
+            } catch (error) {
+                console.error('同步到 Google Sheets 失敗:', error);
+                updateSyncStatus('error');
+            }
+        }
+
+        // 更新同步狀態
+        function updateSyncStatus(status) {
+            const indicator = document.getElementById('syncStatus');
+            if (indicator) {
+                if (status === 'success') {
+                    indicator.textContent = '✅ 已同步';
+                    indicator.style.color = '#4CAF50';
+                } else {
+                    indicator.textContent = '❌ 同步失敗';
+                    indicator.style.color = '#f44336';
+                }
+                
+                // 3秒後清除狀態
+                setTimeout(() => {
+                    indicator.textContent = '';
+                }, 3000);
+            }
+        }
+
+        // 從 Google Sheets 載入歷史記錄
+        async function loadHistoryFromGoogleSheets() {
+            try {
+                updateHistoryStatus('loading');
+                
+                const url = `${GOOGLE_SHEETS_URL}?action=getHistory`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('網路錯誤');
+                }
+                
+                const data = await response.json();
+                displayHistory(data.records || []);
+                updateHistoryStatus('success');
+            } catch (error) {
+                console.error('載入歷史記錄失敗:', error);
+                updateHistoryStatus('error');
+            }
+        }
+
+        // 顯示歷史記錄
+        function displayHistory(records) {
+            const historyContainer = document.getElementById('historyRecords');
+            if (!historyContainer) return;
+            
+            if (records.length === 0) {
+                historyContainer.innerHTML = '<p style="text-align: center; color: #666;">暫無歷史記錄</p>';
+                return;
+            }
+            
+            // 按日期分組
+            const groupedRecords = records.reduce((groups, record) => {
+                const date = record.date;
+                if (!groups[date]) {
+                    groups[date] = { morning: [], afternoon: [] };
+                }
+                groups[date][record.period].push(record);
+                return groups;
+            }, {});
+            
+            let html = '';
+            Object.keys(groupedRecords).sort().reverse().forEach(date => {
+                const dayRecords = groupedRecords[date];
+                const totalMorning = dayRecords.morning.reduce((sum, r) => sum + (r.durationSeconds || 0), 0);
+                const totalAfternoon = dayRecords.afternoon.reduce((sum, r) => sum + (r.durationSeconds || 0), 0);
+                const totalDay = totalMorning + totalAfternoon;
+                
+                html += `
+                    <div class="history-day">
+                        <div class="history-date">
+                            <h4>${date}</h4>
+                            <span class="daily-total">總計: ${formatTimeChinese(totalDay)}</span>
+                        </div>
+                        <div class="history-periods">
+                            <div class="history-period">
+                                <h5>🌅 上午 (${formatTimeChinese(totalMorning)})</h5>
+                                <div class="history-sessions">
+                `;
+                
+                dayRecords.morning.forEach(record => {
+                    html += `
+                        <div class="history-session">
+                            <span>${record.startTime} - ${record.endTime}</span>
+                            <span>${record.duration}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                                </div>
+                            </div>
+                            <div class="history-period">
+                                <h5>☀️ 下午 (${formatTimeChinese(totalAfternoon)})</h5>
+                                <div class="history-sessions">
+                `;
+                
+                dayRecords.afternoon.forEach(record => {
+                    html += `
+                        <div class="history-session">
+                            <span>${record.startTime} - ${record.endTime}</span>
+                            <span>${record.duration}</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyContainer.innerHTML = html;
+        }
+
+        // 更新歷史記錄狀態
+        function updateHistoryStatus(status) {
+            const button = document.getElementById('loadHistoryBtn');
+            const statusEl = document.getElementById('historyStatus');
+            
+            if (status === 'loading') {
+                if (button) button.textContent = '載入中...';
+                if (statusEl) statusEl.textContent = '⏳ 載入歷史記錄中...';
+            } else if (status === 'success') {
+                if (button) button.textContent = '重新載入歷史記錄';
+                if (statusEl) statusEl.textContent = '';
+            } else {
+                if (button) button.textContent = '載入歷史記錄';
+                if (statusEl) statusEl.textContent = '❌ 載入失敗，請稍後再試';
+            }
+        }
+
+        // 切換歷史記錄區域顯示
+        function toggleHistory() {
+            const historySection = document.getElementById('historySection');
+            if (historySection.style.display === 'none' || historySection.style.display === '') {
+                historySection.style.display = 'block';
+                loadHistoryFromGoogleSheets();
+            } else {
+                historySection.style.display = 'none';
+            }
         }
 
         // 載入今日資料
@@ -498,4 +788,4 @@
         });
     </script>
 </body>
-</html>
+</html><script async data-explicit-opt-in="true" data-deployment-id="dpl_7c9KPHnxXvN8sgnnennSRJZMucDw" src="https://vercel.live/_next-live/feedback/feedback.js"></script>
