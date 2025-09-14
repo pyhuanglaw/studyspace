@@ -730,9 +730,9 @@
             
             // 綁定事件
             document.getElementById('morningStart').addEventListener('click', () => startTimer('morning'));
-            document.getElementById('morningStop').addEventListener('click', () => stopTimer('morning'));
+            document.getElementById('morningStop').addEventListener('click', async () => await stopTimer('morning'));
             document.getElementById('afternoonStart').addEventListener('click', () => startTimer('afternoon'));
-            document.getElementById('afternoonStop').addEventListener('click', () => stopTimer('afternoon'));
+            document.getElementById('afternoonStop').addEventListener('click', async () => await stopTimer('afternoon'));
         });
 
         // ========== 請假系統功能 ==========
@@ -1006,10 +1006,13 @@
         }
 
         // 停止計時
-        function stopTimer(period) {
+        async function stopTimer(period) {
+            let sessionStartTime, sessionDuration;
+            
             if (period === 'morning') {
                 if (morningStartTime) {
-                    const sessionDuration = Math.floor((Date.now() - morningStartTime) / 1000);
+                    sessionStartTime = morningStartTime;
+                    sessionDuration = Math.floor((Date.now() - morningStartTime) / 1000);
                     morningElapsed += sessionDuration;
                     saveSession('morning', morningStartTime, Date.now(), sessionDuration);
                     morningStartTime = null;
@@ -1021,7 +1024,8 @@
                 document.getElementById('morningTimer').textContent = formatTime(morningElapsed);
             } else {
                 if (afternoonStartTime) {
-                    const sessionDuration = Math.floor((Date.now() - afternoonStartTime) / 1000);
+                    sessionStartTime = afternoonStartTime;
+                    sessionDuration = Math.floor((Date.now() - afternoonStartTime) / 1000);
                     afternoonElapsed += sessionDuration;
                     saveSession('afternoon', afternoonStartTime, Date.now(), sessionDuration);
                     afternoonStartTime = null;
@@ -1033,8 +1037,65 @@
                 document.getElementById('afternoonTimer').textContent = formatTime(afternoonElapsed);
             }
             
+            // 同步到新的後端儲存
+            if (sessionStartTime && sessionDuration) {
+                await logTimeToBackend(sessionDuration, period, sessionStartTime);
+            }
+            
             updateDisplay();
             displaySessions();
+        }
+
+        // 記錄時間到新的後端儲存
+        async function logTimeToBackend(duration, period, sessionStartTime) {
+            const statusEl = document.getElementById('syncStatus');
+            
+            try {
+                // 顯示同步進行中狀態
+                if (statusEl) {
+                    statusEl.innerHTML = '🔄 正在同步紀錄到雲端...';
+                    statusEl.style.color = '#2196F3';
+                }
+
+                const response = await fetch('/api/log-time', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        duration: duration,
+                        period: period,
+                        sessionStartTime: sessionStartTime
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // 顯示成功狀態
+                    if (statusEl) {
+                        statusEl.innerHTML = '✅ 時間已成功記錄到雲端';
+                        statusEl.style.color = '#4CAF50';
+                    }
+                    console.log('時間已成功記錄到雲端:', result);
+                } else {
+                    throw new Error(result.message || '同步失敗');
+                }
+            } catch (error) {
+                console.error('同步到雲端失敗:', error);
+                // 顯示錯誤狀態
+                if (statusEl) {
+                    statusEl.innerHTML = '❌ 同步失敗';
+                    statusEl.style.color = '#f44336';
+                }
+            }
+
+            // 3秒後清除狀態顯示
+            if (statusEl) {
+                setTimeout(() => {
+                    statusEl.innerHTML = '';
+                }, 3000);
+            }
         }
 
         // 生成唯一 ID
